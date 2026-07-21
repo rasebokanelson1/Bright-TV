@@ -45,13 +45,25 @@ FROM user_profiles;
 ---------------------------------------
 -- DATE FUNCTIONS
 ----------------------------------------
-SELECT UserID0,
+CREATE TEMPORARY TABLE nelson AS (
+SELECT COUNT(DISTINCT UserID0) AS number_of_subs,
     RecordDate2,
     TO_DATE(RecordDate2) AS watch_date,
     DAYNAME(TO_DATE(RecordDate2)) AS day_name,
+    CASE
+    WHEN DAYNAME(TO_DATE(RecordDate2)) IN ('Sat', 'Sun') THEN '02. Weekend'
+    ELSE '01. Weekday'
+    END AS day_classification,
     MONTHNAME(TO_DATE(RecordDate2)) AS month_name,
-    YEAR(TO_DATE(RecordDate2)) AS event_year
-FROM viewership;
+    YEAR(TO_DATE(RecordDate2)) AS event_year,
+    DAY(TO_DATE(RecordDate2)) AS event_dt
+FROM viewership
+WHERE UserID0 IS NOT NULL
+GROUP BY ALL
+ORDER BY watch_date DESC);
+
+SELECT *
+FROM nelson;
 
 
 
