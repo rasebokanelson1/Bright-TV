@@ -1,4 +1,9 @@
 -- Databricks notebook source
+-- MAGIC %md
+-- MAGIC ## **USER PROFILES DATA PROCESSING**
+
+-- COMMAND ----------
+
 --------------------------------------------
 -- Specifiying which cataog and schema to draw data from
 ------------------------------------------------
@@ -371,5 +376,99 @@ ORDER BY users DESC;-- This shows the total number of users sharing same email a
 
 
 
+
+
+
+-- COMMAND ----------
+
+-- MAGIC %md
+-- MAGIC # **VIEWERSHIP DATA PROCESSING**
+
+-- COMMAND ----------
+
+--------------------------------------------
+-- Specifiying which cataog and schema to draw data from
+------------------------------------------------
+USE bright_tv.data;
+
+--------------------------------------------
+-- Retrieving data tables
+---------------------------------------------
+SELECT *
+FROM viewership;
+
+--------------------------------------------
+-- UserID Checks
+---------------------------------------------
+
+SELECT COUNT(*) AS number_of_rows,
+        COUNT(DISTINCT UserID0) AS number_of_users
+FROM viewership; --Checking the size of the data. Result= users<rows which means some userids repeat and this makes sense.
+
+SELECT COUNT(*) AS userid_nulls_count
+FROM viewership
+WHERE UserID0 IS NULL; --Checking for NULLS. Result = Zero NULLS.
+
+SELECT COUNT(*) AS userid_nulls_count_1
+FROM viewership
+WHERE userid4 IS NULL; --Checking for NULLS. Result = Zero NULLS.
+
+SELECT DISTINCT UserID0,
+        COUNT(*) AS duplicate_count
+FROM viewership
+GROUP BY UserID0
+HAVING duplicate_count > 1; --Checking for users duplicates. Result = No duplicates.
+
+SELECT COUNT(*) AS one_userid
+FROM viewership
+WHERE UserID0 = userid4; --Checking where the two userid's are the same. Result:9515 userid's are the same on both columns.
+
+SELECT COUNT(*) AS one_userid
+FROM viewership
+WHERE UserID0 <> userid4; --485 userid's are not the same on both columns.
+
+SELECT
+COALESCE(UserID0, userid4) AS userid
+FROM viewership;
+
+----------------------------------------
+--Channel2 Checks
+----------------------------------------
+
+SELECT DISTINCT Channel2
+FROM viewership; --Checking different unique channels.
+
+SELECT DISTINCT
+CASE
+WHEN Channel2 IN ('SawSee','Sawsee') THEN 'SawSee'
+WHEN Channel2 IN ('SuperSport Live Events','Live on SuperSport', 'Supersport Live Events', 'DStv Events 1') THEN 'Live Events'
+ELSE Channel2
+END AS tv_channel
+FROM viewership; --Fixes SawSee channel name and groups live events.
+
+----------------------------------------
+--RecordDate2 Checks
+----------------------------------------
+
+SELECT MIN(TO_DATE(RecordDate2)) AS start_date,
+        MAX(TO_DATE(RecordDate2)) AS end_date
+FROM viewership;-- Results show that this is a 3 months' data ranging from 2016 January to 2016 March.
+
+SELECT 
+    TO_DATE(RecordDate2) AS watch_date,
+    MONTHNAME(RecordDate2) AS month_name,
+    DAYNAME(RecordDate2) AS day_name,
+    CASE
+        WHEN day_name IN ('Sat', 'Sun') THEN 'weekend'
+        ELSE 'weekday'
+        END AS day_classification
+FROM viewership;
+
+
+
+
+
+
+-- COMMAND ----------
 
 
