@@ -202,8 +202,8 @@ WHERE Age IS NULL;
 
 --Results show that the age column is clean. Age will then be structured into different groups for better context.
 
-SELECT MIN(Age) AS youngest_user,
-        MAX(Age) AS oldest_user
+SELECT MIN(Age) AS youngest_user, -- 0
+        MAX(Age) AS oldest_user -- 114
 FROM user_profiles; --This seeks to find out the youngest and oldest users.
 
 SELECT Age,
@@ -222,11 +222,11 @@ FROM user_profiles; --Structuring age into different groups
 
 SELECT COUNT(*) AS total_zero_age
 FROM user_profiles
-WHERE Age = 0;-- 920 users found. Cause for concern/ further investigation.
+WHERE Age = 0;-- 920 users aged 0 years found. Cause for concern/ further investigation.
 
 SELECT COUNT(*) AS total_over_hundred_age
 FROM user_profiles
-WHERE Age > 100; --7 users found.
+WHERE Age > 100; --7 users aged over 100 years found.
 
 
 --------------------------------------------
@@ -276,12 +276,13 @@ FROM user_profiles;
 -- Social Media Checks
 ---------------------------------------------
 
-SELECT DISTINCT `Social Media Handle`
-FROM user_profiles;
-
 SELECT `Social Media Handle`
 FROM user_profiles
-WHERE `Social Media Handle` = 'None' OR `Social Media Handle` = ' ';
+WHERE `Social Media Handle` = 'None' OR `Social Media Handle` = ' '; --Checking for "None" and empty cells. Result= There are 'None' cells and no empty cells.
+
+SELECT COUNT(*) AS total_none_cells
+FROM user_profiles
+WHERE `Social Media Handle` = 'None';-- 920 users found with 'None' cells.
 
 SELECT `Social Media Handle`
 FROM user_profiles
@@ -292,36 +293,61 @@ SELECT `Social Media Handle`,
     WHEN `Social Media Handle` IS NOT NULL THEN 'Yes'
     ELSE 'No'
     END AS Has_Social_Media
-FROM user_profiles;
+FROM user_profiles; -- Flagging users with or without social media handle.
 
---MATCHING THE USERS
-
-SELECT COUNT(*) AS matching_users
-FROM user_profiles
-WHERE Age = 0 AND `Social Media Handle` = 'None';
+------------------------------------------------
+--Matching Users/ Age vs Social Media Handle
+------------------------------------------------
 
 SELECT COUNT(*) AS matching_users
 FROM user_profiles
-WHERE `Social Media Handle` = ' ';
-
-
-SELECT Age,
-        `Social Media Handle`
-FROM user_profiles
-WHERE Age = 0 AND `Social Media Handle` = 'None';
+WHERE Age = 0 AND `Social Media Handle` = 'None'; -- 918 Users who are aged 0 and have 'None'/ no social media handle.
 
 SELECT *
 FROM user_profiles
-WHERE Age = 0
-  AND `Social Media Handle` <> 'None';
+WHERE Age = 0 AND `Social Media Handle` <> 'None'; -- 2 other users aged 0 years have a social media handle.
 
 
+------------------------------------------------
+--Email Checks
+------------------------------------------------
 
+SELECT Email,
+COUNT (*) AS total_email_count
+FROM user_profiles
+GROUP BY Email
+ORDER BY total_email_count DESC;-- Checking if there are unique users with the same email address.
 
+SELECT Email,
+        COUNT(*) AS total_users_same_email
+FROM user_profiles
+WHERE Email = 'Hugh14@abcmail.com'
+GROUP BY Email;-- Example of different users with same email. Result= 26 (highest count) unique users use this one same email. 
 
+SELECT DISTINCT 
+        UserID,
+        Name,
+        Surname
+FROM user_profiles
+WHERE Email = 'Hugh14@abcmail.com';-- 26 unique UserIDs linked to one email address. 
 
+SELECT DISTINCT 
+        Name,
+        Surname
+FROM user_profiles
+WHERE Email = 'Hugh14@abcmail.com';-- 22 users with unique combination of name and surname linked to one email. This means 4 others share the same name and surname combination.
 
+SELECT *
+FROM user_profiles
+WHERE Email = 'Hugh14@abcmail.com'; -- Checking what these users with this one email have in common. Result= These are people from different walks of life. Different gender, race, age and province. But here's whats's interesting; they share the same email and social media handle. That raises serious concern. I mean, no email provider allows same email address and no social media platform allows same username. it can't be that they've all used 26 different social media platforms. Therefore, we can't confidently rely on Email and Social Media Handle columns for analysis.
 
+SELECT Email,
+       `Social Media Handle`,
+       COUNT(*) AS users
+FROM user_profiles
+GROUP BY Email, `Social Media Handle`
+HAVING users > 1
+ORDER BY users DESC;-- This shows the total number of users sharing same email and social media handle, and further reinforces the idea that the two columns can't be used for analysis with high level of confidence.
 
 
 
