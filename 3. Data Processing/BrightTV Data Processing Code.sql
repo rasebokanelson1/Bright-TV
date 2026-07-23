@@ -222,7 +222,7 @@ FROM user_profiles; --Structuring age into different groups
 
 SELECT COUNT(*) AS total_zero_age
 FROM user_profiles
-WHERE Age = 0;-- 920 users aged 0 years found. Cause for concern/ further investigation.
+WHERE Age = 0;-- 920 users aged 0 years found. NOTE: Cause for concern/ further investigation.
 
 SELECT COUNT(*) AS total_over_hundred_age
 FROM user_profiles
@@ -316,16 +316,15 @@ SELECT Email,
 COUNT (*) AS total_email_count
 FROM user_profiles
 GROUP BY Email
-ORDER BY total_email_count DESC;-- Checking if there are unique users with the same email address.
+ORDER BY total_email_count DESC;-- Checking how many times the same email address was used. Result= There are plenty.
 
 SELECT Email,
-        COUNT(*) AS total_users_same_email
+        COUNT(*) AS total_same_email
 FROM user_profiles
 WHERE Email = 'Hugh14@abcmail.com'
-GROUP BY Email;-- Example of different users with same email. Result= 26 (highest count) unique users use this one same email. 
+GROUP BY Email;-- Example of how many times the same email address was used. Result= 26 (highest count) same email was used 26 times. 
 
-SELECT DISTINCT 
-        UserID,
+SELECT DISTINCT UserID,
         Name,
         Surname
 FROM user_profiles
@@ -339,7 +338,7 @@ WHERE Email = 'Hugh14@abcmail.com';-- 22 users with unique combination of name a
 
 SELECT *
 FROM user_profiles
-WHERE Email = 'Hugh14@abcmail.com'; -- Checking what these users with this one email have in common. Result= These are people from different walks of life. Different gender, race, age and province. But here's whats's interesting; they share the same email and social media handle. That raises serious concern. I mean, no email provider allows same email address and no social media platform allows same username. it can't be that they've all used 26 different social media platforms. Therefore, we can't confidently rely on Email and Social Media Handle columns for analysis.
+WHERE Email = 'Hugh14@abcmail.com'; -- Checking what these users with this one email have in common. Result= These are people from different walks of life. Different gender, race, age and province. But here's whats's interesting; they share the same email and social media handle. That raises a serious concern. I mean, no email provider allows same email address and no social media platform allows same username. It can't be that they've all used 26 different social media platforms. Therefore, we can't confidently rely on Email and Social Media Handle columns for analysis.
 
 SELECT Email,
        `Social Media Handle`,
@@ -347,7 +346,25 @@ SELECT Email,
 FROM user_profiles
 GROUP BY Email, `Social Media Handle`
 HAVING users > 1
-ORDER BY users DESC;-- This shows the total number of users sharing same email and social media handle, and further reinforces the idea that the two columns can't be used for analysis with high level of confidence.
+ORDER BY users DESC;-- This shows the total number of users sharing same email and social media handle. Result= 299 rows have these duplicates and as a result, this further reinforces the idea that the two columns can't be used for analysis with high level of confidence.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
