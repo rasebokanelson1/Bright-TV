@@ -80,7 +80,7 @@ SELECT Age,
     WHEN age BETWEEN 36 AND 50 THEN '5. Adult'
     WHEN age BETWEEN 51 AND 65 THEN '6. Elder'
     WHEN age >65 THEN '7. Pensioner'
-    END AS age_groups
+    END AS Age_group
 FROM user_profiles; --Structuring age into different groups
 
 ------------------------------------
@@ -133,45 +133,8 @@ SELECT DISTINCT
     WHEN Race = 'None' THEN 'unknown'
     WHEN TRIM(Race) = '' THEN 'unknown'
     ELSE Race
-    END AS race_clean
+    END AS Race_clean
 FROM user_profiles;
-
-
---------------------------------------------
--- Social Media Checks
----------------------------------------------
-
-SELECT DISTINCT `Social Media Handle`
-FROM user_profiles;
-
---------------------------------------------
--- Specifiying which cataog and schema to draw data from
-------------------------------------------------
-USE bright_tv.data;
-
---------------------------------------------
--- Retrieving data tables
----------------------------------------------
-SELECT *
-FROM user_profiles;
-
---------------------------------------------
--- UserID Checks
----------------------------------------------
-
-SELECT COUNT(*) AS number_of_rows,
-        COUNT(DISTINCT UserID) AS number_of_users
-FROM user_profiles; --Checking the size of the data
-
-SELECT COUNT(*) AS userid_nulls_count
-FROM user_profiles
-WHERE UserID IS NULL; --Checking for NULLS. Result = Zero NULLS.
-
-SELECT DISTINCT UserID,
-        COUNT(*) AS duplicate_count
-FROM user_profiles
-GROUP BY UserID
-HAVING duplicate_count > 1; --Checking for users duplicates. Result = No duplicates.
 
 --------------------------------------------
 -- Gender Checks
@@ -294,9 +257,10 @@ FROM user_profiles
 WHERE `Social Media Handle` IS NULL; -- Checking for NULLS. Result= Zero NULLS.
 
 SELECT `Social Media Handle`,
-    CASE 
-    WHEN `Social Media Handle` IS NOT NULL THEN 'Yes'
-    ELSE 'No'
+    CASE
+    WHEN `Social Media Handle`='None' OR TRIM(`Social Media Handle`) = ' '
+    THEN 'No'
+    ELSE 'Yes'
     END AS Has_Social_Media
 FROM user_profiles; -- Flagging users with or without social media handle.
 
@@ -403,25 +367,19 @@ FROM viewership;
 
 SELECT COUNT(*) AS number_of_rows,
         COUNT(DISTINCT UserID0) AS number_of_users
-FROM viewership; --Checking the size of the data. Result= users<rows which means some userids repeat and this makes sense.
+FROM viewership; --Checking the size of the data. Result= users<rows which means some userids repeat and this makes sense because they watch different shows at different times and so will generate more rows. In essence, userids will duplicate.
 
-SELECT COUNT(*) AS userid_nulls_count
+SELECT COUNT(*) AS userid0_nulls_count
 FROM viewership
 WHERE UserID0 IS NULL; --Checking for NULLS. Result = Zero NULLS.
 
-SELECT COUNT(*) AS userid_nulls_count_1
+SELECT COUNT(*) AS userid4_nulls_count
 FROM viewership
 WHERE userid4 IS NULL; --Checking for NULLS. Result = Zero NULLS.
 
-SELECT DISTINCT UserID0,
-        COUNT(*) AS duplicate_count
-FROM viewership
-GROUP BY UserID0
-HAVING duplicate_count > 1; --Checking for users duplicates. Result = No duplicates.
-
 SELECT COUNT(*) AS one_userid
 FROM viewership
-WHERE UserID0 = userid4; --Checking where the two userid's are the same. Result:9515 userid's are the same on both columns.
+WHERE UserID0 = userid4; --Result:9515 userid's are the same on both columns.
 
 SELECT COUNT(*) AS one_userid
 FROM viewership
@@ -429,7 +387,7 @@ WHERE UserID0 <> userid4; --485 userid's are not the same on both columns.
 
 SELECT
 COALESCE(UserID0, userid4) AS userid
-FROM viewership;
+FROM viewership;--This prioritizes userid's from UserID0. I'm okay with this because the discrepancy is lower.
 
 ----------------------------------------
 --Channel2 Checks
@@ -438,31 +396,135 @@ FROM viewership;
 SELECT DISTINCT Channel2
 FROM viewership; --Checking different unique channels.
 
+SELECT COUNT(*) AS no_of_nulls
+FROM viewership
+WHERE Channel2 IS NULL;--No NULLS.
+
 SELECT DISTINCT
 CASE
 WHEN Channel2 IN ('SawSee','Sawsee') THEN 'SawSee'
 WHEN Channel2 IN ('SuperSport Live Events','Live on SuperSport', 'Supersport Live Events', 'DStv Events 1') THEN 'Live Events'
 ELSE Channel2
-END AS tv_channel
+END AS channel_clean
 FROM viewership; --Fixes SawSee channel name and groups live events.
 
 ----------------------------------------
 --RecordDate2 Checks
 ----------------------------------------
 
+SELECT COUNT(*) AS no_of_nulls
+FROM viewership
+WHERE RecordDate2 IS NULL;--No NULLS.
+
+SELECT RecordDate2,
+    from_utc_timestamp(RecordDate2, 'Africa/Johannesburg') AS RecordDate_SAST
+FROM viewership
+LIMIT 10;--Convert and preview date data. UTC>>SAST.
+
 SELECT MIN(TO_DATE(RecordDate2)) AS start_date,
         MAX(TO_DATE(RecordDate2)) AS end_date
 FROM viewership;-- Results show that this is a 3 months' data ranging from 2016 January to 2016 March.
 
+------------------------------------------------------------------------
+WITH cleaned_viewership AS (
+SELECT *,
+    from_utc_timestamp(RecordDate2, 'Africa/Johannesburg') AS RecordDate_SAST
+FROM viewership
+)
+
 SELECT 
-    TO_DATE(RecordDate2) AS watch_date,
-    MONTHNAME(RecordDate2) AS month_name,
-    DAYNAME(RecordDate2) AS day_name,
+    TO_DATE(RecordDate_SAST) AS watch_date,
+    date_format(RecordDate_SAST,'HH:mm:ss') AS watch_time,
+    CASE
+        WHEN watch_time BETWEEN '00:00:00' AND '05:59:59' THEN '01. Midnight'
+        WHEN watch_time BETWEEN '06:00:00' AND '11:59:59' THEN '02. Morning'
+        WHEN watch_time BETWEEN '12:00:00' AND '16:59:59' THEN '03. Afternoon'
+        WHEN watch_time BETWEEN '17:00:00' AND '23:59:59' THEN '04. Evening'
+        END AS time_of_day,
+        HOUR(RecordDate_SAST) AS hour_of_day,
+    MONTHNAME(RecordDate_SAST) AS month_name,
+    DAYNAME(RecordDate_SAST) AS day_name,
     CASE
         WHEN day_name IN ('Sat', 'Sun') THEN 'weekend'
         ELSE 'weekday'
         END AS day_classification
-FROM viewership;
+FROM cleaned_viewership;--extracting useful data for possible business questions.
+
+
+----------------------------------------
+--Duration 2 Checks
+----------------------------------------
+
+SELECT `Duration 2`
+FROM viewership;--previewing the data in the column
+
+SELECT COUNT(*) AS no_of_nulls
+FROM viewership
+WHERE `Duration 2` IS NULL;--No NULLS.
+
+SELECT DATE_FORMAT(`Duration 2`, 'HH:mm:ss') AS duration,
+        CASE
+        WHEN duration BETWEEN '00:05:00' AND '00:30:00' THEN '01. Short Session: <30 min'
+        WHEN duration BETWEEN '00:30:01' AND '00:59:59' THEN '02. Medium Session: <60 min'
+        WHEN duration > '00:59:59' THEN '03. Long Session: >60 min'
+        ELSE '04. No Session'
+        END AS screen_time_bucket
+FROM viewership;--Extracting duration and creating a screen time bucket
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+------------------------------------------
+--SIDE INVESTIGATION 
+------------------------------------------
+
+SELECT UserID0,
+        userid4
+FROM viewership
+WHERE UserID0 <> userid4;-- previews userids that dont match on both columns. Result= 485.
+
+SELECT UserID0 FROM viewership
+EXCEPT
+SELECT UserID FROM user_profiles;-- every userid that's in viewership is on user_profiles
+
+SELECT userid4 FROM viewership
+EXCEPT
+SELECT UserID FROM user_profiles;-- Same thing here; every userid that's in viewership is on user_profiles
+
+SELECT UserID FROM user_profiles
+EXCEPT
+SELECT UserID0 FROM viewership;-- 989 rows of userids that are on user_profiles are not on viewership.
+
+SELECT UserID FROM user_profiles
+EXCEPT
+SELECT userid4 FROM viewership;-- 1295 rows of userids that are on user_profiles are not on viewership.
+
+--Conclusion: user_profiles generally has more ids than viewership irrespective of the column between UserID0 and userid4.
+
+--But,
+ 
+SELECT DISTINCT t1.UserID
+FROM user_profiles t1
+INNER JOIN viewership t2
+  ON t1.UserID = t2.UserID0 AND t1.UserID = t2.userid4;-- 4051 rows/ ids match on columns from the two tables.
+
+  --Conclusion: I think we can use these ids for our analysis since they appear on both tables and would be more realiable. I just don't have a clear idea on how we can achieve that but i think it's worth considering.
+
+
 
 
 
@@ -470,5 +532,235 @@ FROM viewership;
 
 
 -- COMMAND ----------
+
+-- MAGIC %md
+-- MAGIC # **CLEAN DATA**
+
+-- COMMAND ----------
+
+----------------------------------
+--User Profiles clean table
+----------------------------------
+
+SELECT UserID,
+        Name,
+        Surname,
+        
+        CASE
+    WHEN Gender = 'None' THEN 'unknown'
+    WHEN TRIM(Gender) = '' THEN 'unknown'
+    ELSE Gender
+    END AS Gender_clean,
+    
+    Age,
+    
+    CASE 
+    WHEN age = 0 THEN '1. Infants'
+    WHEN age BETWEEN 1 AND 12 THEN '2. Kids'
+    WHEN age BETWEEN 13 AND 19 THEN '3. Teenager'
+    WHEN age BETWEEN 20 AND 35 THEN '4. Youth'
+    WHEN age BETWEEN 36 AND 50 THEN '5. Adult'
+    WHEN age BETWEEN 51 AND 65 THEN '6. Elder'
+    WHEN age >65 THEN '7. Pensioner'
+    END AS Age_group,
+
+    CASE 
+    WHEN Province = 'None' THEN 'Uncategorized'
+    WHEN TRIM(Province) = '' THEN 'Uncategorized'
+    ELSE Province
+    END AS Province_clean,
+
+    CASE 
+    WHEN Race = 'None' THEN 'unknown'
+    WHEN TRIM(Race) = '' THEN 'unknown'
+    ELSE Race
+    END AS Race_clean,
+
+    CASE
+    WHEN `Social Media Handle` = 'None' OR TRIM(`Social Media Handle`) = ' '
+    THEN 'No'
+    ELSE 'Yes'
+    END AS Has_Social_Media
+
+FROM user_profiles;
+
+
+----------------------------------
+--Viewership clean table
+----------------------------------
+
+
+WITH cleaned_viewership AS (
+
+SELECT   UserID0 AS UserID,
+        from_utc_timestamp(RecordDate2, 'Africa/Johannesburg') AS RecordDate_SAST,
+
+        CASE
+        WHEN Channel2 IN ('SawSee','Sawsee') THEN 'SawSee'
+        WHEN Channel2 IN ('SuperSport Live Events','Live on SuperSport', 'Supersport Live Events', 'DStv Events 1') THEN 'Live Events'
+         ELSE Channel2
+        END AS channel_clean,
+        `Duration 2`
+
+FROM viewership )
+
+SELECT
+        
+        TO_DATE(RecordDate_SAST) AS watch_date,
+    date_format(RecordDate_SAST,'HH:mm:ss') AS watch_time,
+    CASE
+        WHEN watch_time BETWEEN '00:00:00' AND '05:59:59' THEN '01. Midnight'
+        WHEN watch_time BETWEEN '06:00:00' AND '11:59:59' THEN '02. Morning'
+        WHEN watch_time BETWEEN '12:00:00' AND '16:59:59' THEN '03. Afternoon'
+        WHEN watch_time BETWEEN '17:00:00' AND '23:59:59' THEN '04. Evening'
+        END AS time_of_day,
+        HOUR(RecordDate_SAST) AS hour_of_day,
+    MONTHNAME(RecordDate_SAST) AS month_name,
+    DAYNAME(RecordDate_SAST) AS day_name,
+    CASE
+        WHEN day_name IN ('Sat', 'Sun') THEN 'weekend'
+        ELSE 'weekday'
+        END AS day_classification,
+
+        DATE_FORMAT(`Duration 2`, 'HH:mm:ss') AS duration,
+        CASE
+        WHEN duration BETWEEN '00:05:00' AND '00:30:00' THEN '01. Short Session: <30 min'
+        WHEN duration BETWEEN '00:30:01' AND '00:59:59' THEN '02. Medium Session: <60 min'
+        WHEN duration > '00:59:59' THEN '03. Long Session: >60 min'
+        ELSE '04. No Session'
+        END AS screen_time_bucket
+
+FROM cleaned_viewership;
+
+
+
+----------------------------------
+--Final Analysis Table
+----------------------------------
+
+WITH cleaned_user_profiles AS (
+
+    SELECT UserID,
+        CASE
+    WHEN Gender = 'None' THEN 'unknown'
+    WHEN TRIM(Gender) = '' THEN 'unknown'
+    ELSE Gender
+    END AS Gender_Clean,
+    
+    Age,
+    
+    CASE 
+    WHEN age = 0 THEN '1. Infants'
+    WHEN age BETWEEN 1 AND 12 THEN '2. Kids'
+    WHEN age BETWEEN 13 AND 19 THEN '3. Teenager'
+    WHEN age BETWEEN 20 AND 35 THEN '4. Youth'
+    WHEN age BETWEEN 36 AND 50 THEN '5. Adult'
+    WHEN age BETWEEN 51 AND 65 THEN '6. Elder'
+    WHEN age >65 THEN '7. Pensioner'
+    END AS Age_Group,
+
+    CASE 
+    WHEN Province = 'None' THEN 'Uncategorized'
+    WHEN TRIM(Province) = '' THEN 'Uncategorized'
+    ELSE Province
+    END AS Province_Clean,
+
+    CASE 
+    WHEN Race = 'None' THEN 'unknown'
+    WHEN TRIM(Race) = '' THEN 'unknown'
+    ELSE Race
+    END AS Race_Clean,
+
+    CASE
+    WHEN `Social Media Handle` = 'None' OR TRIM(`Social Media Handle`) = ' '
+    THEN 'No'
+    ELSE 'Yes'
+    END AS Has_Social_Media
+
+FROM user_profiles
+
+),
+
+cleaned_viewership AS (
+
+    WITH cleaned_viewership AS (
+
+SELECT   UserID0 AS UserID,
+        from_utc_timestamp(RecordDate2, 'Africa/Johannesburg') AS RecordDate_SAST,
+
+        CASE
+        WHEN Channel2 IN ('SawSee','Sawsee') THEN 'SawSee'
+        WHEN Channel2 IN ('SuperSport Live Events','Live on SuperSport', 'Supersport Live Events', 'DStv Events 1') THEN 'Live Events'
+         ELSE Channel2
+        END AS Channel_Clean,
+        `Duration 2`
+
+FROM viewership )
+
+SELECT
+        UserID,
+        RecordDate_SAST,
+        Channel_Clean,
+        TO_DATE(RecordDate_SAST) AS Watch_Date,
+    DATE_FORMAT(RecordDate_SAST,'HH:mm:ss') AS Watch_Time,
+    CASE
+        WHEN watch_time BETWEEN '00:00:00' AND '05:59:59' THEN '01. Midnight'
+        WHEN watch_time BETWEEN '06:00:00' AND '11:59:59' THEN '02. Morning'
+        WHEN watch_time BETWEEN '12:00:00' AND '16:59:59' THEN '03. Afternoon'
+        WHEN watch_time BETWEEN '17:00:00' AND '23:59:59' THEN '04. Evening'
+        END AS Time_Of_Day,
+        HOUR(RecordDate_SAST) AS Hour_Of_Day,
+    MONTHNAME(RecordDate_SAST) AS Month_Name,
+    DAYNAME(RecordDate_SAST) AS Day_Name,
+    CASE
+        WHEN Day_Name IN ('Sat', 'Sun') THEN 'Weekend'
+        ELSE 'Weekday'
+        END AS Day_Classification,
+
+        DATE_FORMAT(`Duration 2`, 'HH:mm:ss') AS Duration,
+        CASE
+        WHEN duration BETWEEN '00:05:00' AND '00:30:00' THEN '01. Short Session: <30 min'
+        WHEN duration BETWEEN '00:30:01' AND '00:59:59' THEN '02. Medium Session: <60 min'
+        WHEN duration > '00:59:59' THEN '03. Long Session: >60 min'
+        ELSE '04. No Session'
+        END AS Screen_Time_Bucket
+
+FROM cleaned_viewership
+
+)
+
+SELECT
+
+    -- User Information
+    u.UserID,
+    u.Gender_Clean,
+    u.Age,
+    u.Age_Group,
+    u.Province_Clean,
+    u.Race_Clean,
+    u.Has_Social_Media,
+
+    -- Viewing Information
+    v.RecordDate_SAST,
+    v.Watch_Date,
+    v.Watch_Time,
+    v.Hour_Of_Day,
+    v.Day_Name,
+    v.Day_Classification,
+    v.Month_Name,
+    v.Time_Of_Day,
+
+    -- Content
+    v.Channel_Clean,
+
+    -- Engagement
+    v.Duration,
+    v.Screen_Time_Bucket
+
+FROM cleaned_viewership v
+
+LEFT JOIN cleaned_user_profiles u
+    ON v.UserID = u.UserID;
+
 
 
