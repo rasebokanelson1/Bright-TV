@@ -115,6 +115,7 @@ SELECT DISTINCT
     END AS Province_clean
 FROM user_profiles;
 
+
 --------------------------------------------
 -- Race Checks
 ---------------------------------------------
@@ -351,7 +352,7 @@ ORDER BY users DESC;-- This shows the total number of users sharing same email a
 -- COMMAND ----------
 
 --------------------------------------------
--- Specifiying which cataog and schema to draw data from
+-- Specifiying which catalog and schema to draw data from
 ------------------------------------------------
 USE bright_tv.data;
 
@@ -467,7 +468,7 @@ SELECT DATE_FORMAT(`Duration 2`, 'HH:mm:ss') AS duration,
         WHEN duration BETWEEN '00:05:00' AND '00:30:00' THEN '01. Short Session: <30 min'
         WHEN duration BETWEEN '00:30:01' AND '00:59:59' THEN '02. Medium Session: <60 min'
         WHEN duration > '00:59:59' THEN '03. Long Session: >60 min'
-        ELSE '04. No Session'
+        ELSE '04. Brief Session: <5 min'
         END AS screen_time_bucket
 FROM viewership;--Extracting duration and creating a screen time bucket
 
