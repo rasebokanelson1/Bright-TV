@@ -138,110 +138,6 @@ SELECT DISTINCT
 FROM user_profiles;
 
 --------------------------------------------
--- Gender Checks
----------------------------------------------
-
-SELECT DISTINCT Gender
-FROM user_profiles;
-
-SELECT COUNT(*) AS gender_nulls_count
-FROM user_profiles
-WHERE Gender IS NULL;
-
---Results show that some rows have 'None' and empty cells, and zero NULL cells. Query below fixes the issue and groups those as 'Unknown'.
-
-SELECT DISTINCT
-    CASE
-    WHEN Gender = 'None' THEN 'unknown'
-    WHEN TRIM(Gender) = '' THEN 'unknown'
-    ELSE Gender
-    END AS Gender_clean
-FROM user_profiles;
-
---------------------------------------------
--- Age Checks
----------------------------------------------
-
-SELECT DISTINCT Age
-FROM user_profiles;
-
-SELECT COUNT(*) AS age_nulls_count
-FROM user_profiles
-WHERE Age IS NULL;
-
---Results show that the age column is clean. Age will then be structured into different groups for better context.
-
-SELECT MIN(Age) AS youngest_user, -- 0
-        MAX(Age) AS oldest_user -- 114
-FROM user_profiles; --This seeks to find out the youngest and oldest users.
-
-SELECT Age,
-    CASE 
-    WHEN age = 0 THEN '1. Infants'
-    WHEN age BETWEEN 1 AND 12 THEN '2. Kids'
-    WHEN age BETWEEN 13 AND 19 THEN '3. Teenager'
-    WHEN age BETWEEN 20 AND 35 THEN '4. Youth'
-    WHEN age BETWEEN 36 AND 50 THEN '5. Adult'
-    WHEN age BETWEEN 51 AND 65 THEN '6. Elder'
-    WHEN age >65 THEN '7. Pensioner'
-    END AS age_groups
-FROM user_profiles; --Structuring age into different groups
-
-------------------------------------
-
-SELECT COUNT(*) AS total_zero_age
-FROM user_profiles
-WHERE Age = 0;-- 920 users aged 0 years found. NOTE: Cause for concern/ further investigation.
-
-SELECT COUNT(*) AS total_over_hundred_age
-FROM user_profiles
-WHERE Age > 100; --7 users aged over 100 years found.
-
-
---------------------------------------------
--- Province Checks
----------------------------------------------
-
-SELECT DISTINCT Province
-FROM user_profiles;
-
-SELECT COUNT(*) AS province_nulls_count
-FROM user_profiles
-WHERE Province IS NULL; --Zero NULLS.
-
---Results show that some rows have 'None' and empty cells, and zero NULL cells. Query below fixes the issue and groups those as 'uncategorized'.
-
-SELECT DISTINCT
-    CASE 
-    WHEN Province = 'None' THEN 'Uncategorized'
-    WHEN TRIM(Province) = '' THEN 'Uncategorized'
-    ELSE Province
-    END AS Province_clean
-FROM user_profiles;
-
---------------------------------------------
--- Race Checks
----------------------------------------------
-
-SELECT DISTINCT Race
-FROM user_profiles;
-
-SELECT COUNT(*) AS race_nulls_count
-FROM user_profiles
-WHERE Race IS NULL;
-
---Results show that some rows have 'None' and empty cells, and zero NULL cells. Query below fixes the issue and groups those as 'unknown'.
-
-SELECT DISTINCT
-    CASE 
-    WHEN Race = 'None' THEN 'unknown'
-    WHEN TRIM(Race) = '' THEN 'unknown'
-    ELSE Race
-    END AS race_clean
-FROM user_profiles;
-
-
---------------------------------------------
 -- Social Media Checks
 ---------------------------------------------
 
@@ -317,7 +213,6 @@ FROM user_profiles
 GROUP BY Email, `Social Media Handle`
 HAVING users > 1
 ORDER BY users DESC;-- This shows the total number of users sharing same email and social media handle. Result= 299 rows have these duplicates and as a result, this further reinforces the idea that the two columns can't be used for analysis with high level of confidence.
-
 
 
 
@@ -424,9 +319,10 @@ LIMIT 10;--Convert and preview date data. UTC>>SAST.
 
 SELECT MIN(TO_DATE(RecordDate2)) AS start_date,
         MAX(TO_DATE(RecordDate2)) AS end_date
-FROM viewership;-- Results show that this is a 3 months' data ranging from 2016 January to 2016 March.
+FROM viewership;-- Results show that this is a 3 months' data ranging from 2016 January to 2016 March. Before UTC>>SAST conversion.
 
 ------------------------------------------------------------------------
+
 WITH cleaned_viewership AS (
 SELECT *,
     from_utc_timestamp(RecordDate2, 'Africa/Johannesburg') AS RecordDate_SAST
@@ -590,7 +486,6 @@ FROM user_profiles;
 --Viewership clean table
 ----------------------------------
 
-
 WITH cleaned_viewership AS (
 
 SELECT   UserID0 AS UserID,
@@ -628,7 +523,7 @@ SELECT
         WHEN duration BETWEEN '00:05:00' AND '00:30:00' THEN '01. Short Session: <30 min'
         WHEN duration BETWEEN '00:30:01' AND '00:59:59' THEN '02. Medium Session: <60 min'
         WHEN duration > '00:59:59' THEN '03. Long Session: >60 min'
-        ELSE '04. No Session'
+        ELSE '04. Brief Session: <5 min'
         END AS screen_time_bucket
 
 FROM cleaned_viewership;
@@ -682,9 +577,7 @@ FROM user_profiles
 
 ),
 
-cleaned_viewership AS (
-
-    WITH cleaned_viewership AS (
+base_viewership AS (
 
 SELECT   UserID0 AS UserID,
         from_utc_timestamp(RecordDate2, 'Africa/Johannesburg') AS RecordDate_SAST,
@@ -696,7 +589,10 @@ SELECT   UserID0 AS UserID,
         END AS Channel_Clean,
         `Duration 2`
 
-FROM viewership )
+FROM viewership 
+),
+
+cleaned_viewership AS (
 
 SELECT
         UserID,
@@ -723,10 +619,10 @@ SELECT
         WHEN duration BETWEEN '00:05:00' AND '00:30:00' THEN '01. Short Session: <30 min'
         WHEN duration BETWEEN '00:30:01' AND '00:59:59' THEN '02. Medium Session: <60 min'
         WHEN duration > '00:59:59' THEN '03. Long Session: >60 min'
-        ELSE '04. No Session'
+        ELSE '04. Brief Session: <5 min'
         END AS Screen_Time_Bucket
 
-FROM cleaned_viewership
+FROM base_viewership
 
 )
 
